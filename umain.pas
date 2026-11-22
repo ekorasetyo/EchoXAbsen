@@ -48,6 +48,7 @@ type
     procedure BuildRekap;
     procedure FormatGrids;
     procedure UpdateStatus;
+    procedure FormShowHandler(Sender: TObject);
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
@@ -224,6 +225,24 @@ begin
   PrepareDataset;
   PrepareRekap;
   UpdateStatus;
+  OnShow := @FormShowHandler;
+end;
+
+{ Parameter: scanlog.exe [file.csv] [rekap]
+  Dipakai untuk membuka CSV langsung saat start (dan membuat screenshot otomatis). }
+procedure TfrmMain.FormShowHandler(Sender: TObject);
+begin
+  OnShow := nil;
+  if (ParamCount >= 1) and FileExists(ParamStr(1)) then
+  begin
+    try
+      LoadCSV(ParamStr(1));
+    except
+      // abaikan; pengguna bisa membuka manual
+    end;
+    if SameText(ParamStr(2), 'rekap') then
+      pc.ActivePage := tsRekap;
+  end;
 end;
 
 destructor TfrmMain.Destroy;
