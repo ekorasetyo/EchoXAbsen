@@ -2,7 +2,7 @@ name: Build scanlog.exe
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
     tags: [ 'v*' ]
   workflow_dispatch:
 
@@ -18,20 +18,32 @@ jobs:
           lazarus-version: 2.2.6
           with-cache: true
 
-      - name: Build
-        run: lazbuild --build-mode=Default scanlog.lpi
+      - name: Cari proyek dan build
+        shell: pwsh
+        run: |
+          $lpi = Get-ChildItem -Recurse -Filter scanlog.lpi | Select-Object -First 1
+          if (-not $lpi) {
+            Write-Host "scanlog.lpi tidak ditemukan. Isi repo:"
+            Get-ChildItem -Recurse -File | ForEach-Object { $_.FullName }
+            throw "scanlog.lpi tidak ada di repo"
+          }
+          Write-Host "Proyek: $($lpi.FullName)"
+          lazbuild --build-mode=Default $lpi.FullName
+          if ($LASTEXITCODE -ne 0) { throw "lazbuild gagal" }
 
       - name: Siapkan paket
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item scanlog.exe dist/
-          Copy-Item contoh_scanlog.csv dist/
-          Copy-Item README.md dist/
+          $exe = Get-ChildItem -Recurse -Filter scanlog.exe | Select-Object -First 1
+          if (-not $exe) { throw "scanlog.exe tidak ditemukan" }
+          Copy-Item $exe.FullName dist/
+          Get-ChildItem -Recurse -Filter contoh_scanlog.csv | Select-Object -First 1 | Copy-Item -Destination dist/
+          Get-ChildItem -Recurse -Filter README.md | Select-Object -First 1 | Copy-Item -Destination dist/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ScanlogImporter-win32
+          name: ScanlogImporter-win
           path: dist/
 
       - name: Release (jika tag v*)
